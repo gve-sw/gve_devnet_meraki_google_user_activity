@@ -1,0 +1,477 @@
+<!-- 
+Copyright (c) 2021 Cisco and/or its affiliates.
+
+This software is licensed to you under the terms of the Cisco Sample
+Code License, Version 1.1 (the "License"). You may obtain a copy of the
+License at
+
+https://developer.cisco.com/docs/licenses
+
+All use of the material herein must be in accordance with the terms of
+the License. All rights not expressly granted by the License are
+reserved. Unless required by applicable law or agreed to separately in
+writing, software distributed under the License is distributed on an "AS
+IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+or implied. 
+-->
+
+<!doctype html>
+<html lang="en">
+
+<head>
+
+    <!-- Using Cisco UI Kit -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/cui-standard.min.css') }}">
+
+    <!-- Using AJAX to send get & post http requests -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+
+    <style>
+        .highlight {
+            color: lightseagreen;
+            font-weight: bold;
+        }
+    </style>
+
+</head>
+
+<body class="cui">
+
+    <!-- Main Header -->
+    <nav class="header" id="styleguideheader" role="navigation">
+        <div class="container-fluid">
+            <div class="header-panels">
+                <div class="header-panel hidden-md-down">
+                    <a class="header__logo" href="http://www.cisco.com" target="_blank">
+                        <span class="icon-cisco"></span>
+                    </a>
+                    <h1 class="header__title">
+                        <span>Meraki - Google User's Activity - Demo</span>
+                    </h1>
+                </div>
+                <div class="header-panel header-panel--center base-margin-left base-margin-right hidden-lg-up">
+                    <a class="header__logo" href="http://www.cisco.com" target="_blank">
+                        <span class="icon-cisco"></span>
+                    </a>
+                </div>
+                <div class="header-panel header-panel--right hidden-md-down">
+                    <a href="../context" target="_blank" class="header-item" title="Change report inputs"><span
+                            class="btn btn--ghost">Change report inputs</span></a>
+                    <a href="../logout" class="header-item" title="Logout"><span
+                            class="btn btn--ghost">Logout</span></a>
+                    <a href="../" class="header-item" title="Home"><span class="icon-home"></span></a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="content content--alt">
+        <div class="container-fluid">
+
+            <!-- Header -->
+            <div class="panel panel--loose panel--raised base-margin-top">
+                <h5 class="title">
+                    Meraki - Google User's Activity - Demo
+                    <!-- API Key -->
+                    <span class="pull-right">api_key: {{ hidden_api_key }} </span>
+                </h5>
+            </div>
+
+            <!-- Table Section -->
+            <div class="section">
+                <div class="panel panel--loose panel--raised base-margin-top">
+
+                    <!-- Download as CSV Button -->
+                    <a class="export-as-csv">
+                        <button class="btn btn--success"> Download as CSV </button>
+                    </a>
+
+                    <!-- Table -->
+                    <div class="responsive-table">
+                        <table id="results-table" class="table table--lined table--selectable table"
+                            style="width: 100%;">
+                        </table>
+                    </div>
+
+
+                </div>
+            </div>
+
+
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer__links">
+                <ul class="list list--inline">
+                    <li><a href="http://www.cisco.com/cisco/web/siteassets/contacts/index.html"
+                            target="_blank">Contacts</a>
+                    </li>
+                    <li><a href="https://secure.opinionlab.com/ccc01/o.asp?id=jBjOhqOJ" target="_blank">Feedback</a>
+                    </li>
+                    <li><a href="https://www.cisco.com/c/en/us/about/help.html" target="_blank">Help</a></li>
+                    <li><a href="http://www.cisco.com/c/en/us/about/sitemap.html" target="_blank">Site Map</a></li>
+                    <li><a href="https://www.cisco.com/c/en/us/about/legal/terms-conditions.html" target="_blank">Terms
+                            & Conditions</a></li>
+                    </li>
+                    <li><a href="https://www.cisco.com/c/en/us/about/legal/privacy-full.html" target="_blank">Privacy
+                            Statement</a></li>
+                    <li><a href="https://www.cisco.com/c/en/us/about/legal/privacy-full.html#cookies"
+                            target="_blank">Cookie
+                            Policy</a></li>
+                    <li><a href="https://www.cisco.com/c/en/us/about/legal/trademarks.html"
+                            target="_blank">Trademarks</a></li>
+                </ul>
+            </div>
+        </footer>
+
+
+    </div>
+
+    <!-- JavaScript Functions -->
+    <script>
+
+        function timeConvert(n) {
+            var num = n;
+            var days = (num / (60 * 24));
+            var rdays = Math.floor(days);
+            var hours = ((days - rdays) * 24);
+            var rhours = Math.floor(hours);
+            var minutes = (hours - rhours) * 60;
+            var rminutes = Math.round(minutes);
+
+            var result = "";
+            if (rdays != 0) {
+                result += rdays + "d ";
+            }
+            if (rhours != 0) {
+                result += rhours + "h ";
+            }
+            if (rminutes != 0) {
+                result += rminutes + "m";
+            }
+
+            return result;
+        }
+
+        function addDataToTable(html) {
+            $('#results-table').append(html);
+        }
+
+        function collapsibleRows() {
+
+            // Updating curser to pointer 
+            $(".user, .device, .application").css('cursor', 'pointer');
+            $(".user, .device, .application").click(function () {
+                if (!$(this).hasClass("highlight")) {
+                    $(this).addClass("highlight");
+                }
+                else {
+                    $(this).removeClass("highlight");
+                }
+            })
+
+            // Making collapsible rows on the table:
+            // 1-hiding sub-elementss at the start
+            // 2- Toggling direct sub-items when clicked on
+
+            $(".application").nextAll(".user").hide();
+            $(".application").click(function () {
+                // If clicked, and any of sub-elements is visible: hide them all
+                if ($(this).nextUntil('.application').filter('.user').is(':visible')) {
+                    $(this).nextUntil('.application').filter('.user').hide();
+                    $(this).nextUntil('.application').filter('.user').removeClass("highlight");
+                    $(this).nextUntil('.application').filter('.device').hide();
+                    $(this).nextUntil('.application').filter('.device').removeClass("highlight");
+                    $(this).nextUntil('.application').filter('.traffic').hide();
+                    $(this).nextUntil('.application').filter('.traffic').removeClass("highlight");
+                }
+                // Else, show direct sub-elements only
+                else {
+                    $(this).nextUntil('.application').filter('.user').show();
+                }
+            });
+
+            $(".user").nextAll(".device").hide();
+            $(".user").click(function () {
+                // If clicked, and any of sub-elements is visible: hide them all
+                if ($(this).nextUntil('.user').filter('.device').is(':visible')) {
+                    $(this).nextUntil('.user').filter('.device').hide();
+                    $(this).nextUntil('.user').filter('.device').removeClass("highlight");
+                    $(this).nextUntil('.user').filter('.traffic').hide();
+                    $(this).nextUntil('.user').filter('.traffic').removeClass("highlight");
+                }
+                // Else, show direct sub-elements only
+                else {
+                    $(this).nextUntil('.user').filter('.device').show();
+                }
+            });
+
+            $(".device").nextAll(".traffic").hide();
+            $(".device").click(function () {
+                // If clicked, and any of sub-elements is visible: hide them all
+                if ($(this).nextUntil('.device').filter('.traffic').is(':visible')) {
+                    $(this).nextUntil('.device').filter('.traffic').hide();
+                    $(this).nextUntil('.device').filter('.traffic').removeClass("highlight");;
+                }
+                // Else, show direct sub-elements only
+                else {
+                    $(this).nextUntil('.device').filter('.traffic').show();
+                }
+            });
+
+        }
+
+        function organizeTraffic() {
+            var traffic = '{{ traffic | safe }}';
+            // alert('traffic: ' + traffic);
+
+            var traffic_json = JSON.parse(traffic);
+
+            // Creating table headers
+            var table_headers = "";
+
+            // Collecting data to be added to the table view
+            var user_data = "";
+            var device_data = "";
+            var traffic_data = "";
+
+            // Data counters
+            var num_of_users = 0;
+            var num_of_clients = 0;
+            var num_of_occurrences = 0;
+            var total_num_of_occurrences = 0;
+            var session_duration = 0;
+            var total_duration = 0;
+
+
+            for (let org in traffic_json) {
+                // alert('org: ' + org);
+                org_value = traffic_json[org];
+
+                for (let network in org_value) {
+                    // alert('network: ' + network);
+                    network_value = org_value[network];
+
+                    // Org & Network header
+                    table_headers = `
+                    <tr>
+                        <th class="text-center" disabled>Organization: ` + org + `</th>
+                        <th class="text-center"disabled>Network: ` + network + `</th>
+                    </tr>
+                    `;
+                    addDataToTable(table_headers);
+
+                    // Data headers, only when data is found
+                    if (Object.keys(network_value).length !== 0) {
+                        table_headers = `
+                        <tr>
+                            <th class="text-center">Application</th>
+                            <th class="text-center">User</th>
+                            <th class="text-center">Client/Device</th>
+                            <th class="text-center">Occurrences</th>
+                            <th class="text-center">Destination</th>
+                            <th class="text-center">Time/Duration</th>
+                        </tr>
+                        `;
+                        addDataToTable(table_headers);
+                    }
+                    for (let application in network_value) {
+                        // alert('application: ' + application);
+                        application_value = network_value[application];
+                        
+                        // Resetting users counter
+                        num_of_users = 0;
+                        user_data = "";
+
+
+                        for (let user in application_value) {
+                            // alert('user: ' + user);
+                            num_of_users++;
+                            user_value = application_value[user];
+
+                            // Resetting user data counters
+                            device_data = "";
+                            num_of_clients = 0;
+
+
+                            for (let client in user_value) {
+
+                                client_value = user_value[client];
+                                // alert('client name: ' + client_value.name + ', description: ' + client_value.description);
+                                client_traffic = client_value.traffic;
+                                num_of_clients++;
+
+                                // Resetting sessions data
+                                total_num_of_occurrences = 0;
+                                total_duration = 0;
+
+                                // Resetting traffic data
+                                num_of_occurrences = 0;
+                                traffic_data = "";
+                                for (let destination in client_traffic) {
+                                    destination_value = client_traffic[destination];
+                                    occurrences = destination_value.occurrences;
+                                    // alert('destination: ' + destination + ', occurrences: ' + occurrences);
+                                    num_of_occurrences += occurrences;
+                                    total_num_of_occurrences += occurrences;
+                                    timestamp_list = destination_value.ts;
+
+                                    for (let timestamp in timestamp_list) {
+                                        duration_in_minute = timestamp_list[timestamp] / 60;
+                                        // alert('timestamp: ' + timestamp + ', duration: ' + duration_in_minute);
+                                        total_duration += duration_in_minute;
+                                        session_duration = timeConvert(duration_in_minute);
+
+                                        traffic_data += `
+                                        <tr class="traffic">
+                                            <td><span>` + "" + `</span></td>
+                                            <td class="text-center"><span>`+ "" + `</span></td>
+                                            <td class="text-center"><span>` + "" + `</span></td>
+                                            <td class="text-center"><span>` + "" + `</span></td>
+                                            <td class="text-center"><span>` + destination + `</span></td>
+                                            <td class="text-center">` + timestamp + ` (Duration: ` + session_duration + `)</td>
+                                        </tr>
+                                        `;
+                                    }
+
+                                }
+
+                                // Measuring duration
+                                total_duration = timeConvert(total_duration);
+
+                                // Collecting client/device data
+                                device_data += `
+                                <tr class="device">
+                                    <td><span>` + "" + `</span></td>
+                                    <td class="text-center"><span>` + "" + `</span></td>
+                                    <td class="text-center"><span>`+ client_value.description + `</span></td>
+                                    <td class="text-center"><span class="badge badge--danger">` + total_num_of_occurrences + `</span></td>
+                                    <td class="text-center">` + "" + `</td>
+                                    <td class="text-center">Duration: ` + total_duration + `</td>
+                                </tr>
+                                `;
+                                device_data += traffic_data;
+
+                            }
+
+                            // Adding user data to table
+                            user_data += `
+                            <tr class="user">
+                                <td class="text-center"><span>` + "" + `</span></td>
+                                <td><span>` + user + `</span></td>
+                                <td class="text-center"><span class="badge badge--warning">`+ num_of_clients + `</span></td>
+                                <td class="text-center">` + "" + `</td>
+                                <td class="text-center">` + "" + `</td>
+                                <td class="text-center">` + "" + `</td>
+                            </tr>
+                            `;
+                            user_data += device_data;
+
+                        }
+
+                        // Add application to table
+                        application_data = `
+                        <tr class="application">
+                            <td><span>` + application + `</span></td>
+                            <td class="text-center"><span class="badge">`+ num_of_users + `</span></td>
+                            <td class="text-center"><span>` + "" + `</span></td>
+                            <td class="text-center"><span>` + "" + `</span></td>
+                            <td class="text-center"><span>` + "" + `</span></td>
+                            <td class="text-center">` + "" + `</td>
+                        </tr>
+                        `;
+                        application_data += user_data;
+                        addDataToTable(application_data);
+                    }
+
+
+                }
+            }
+            collapsibleRows();
+        }
+
+        organizeTraffic();
+
+        function exportTableToCSV($table, filename) {
+
+            var $rows = $table.find('tr'),
+
+                // Temporary delimiter characters unlikely to be typed by keyboard
+                // This is to avoid accidentally splitting the actual contents
+                tmpColDelim = String.fromCharCode(11), // vertical tab character
+                tmpRowDelim = String.fromCharCode(0), // null character
+
+                // actual delimiter characters for CSV format
+                colDelim = '","',
+                rowDelim = '"\r\n"',
+
+                // Grab text from table into CSV formatted string
+                csv = '"' + $rows.map(function (i, row) {
+                    var $row = $(row),
+                        $cols = $row.find('td,th');
+
+                    return $cols.map(function (j, col) {
+                        var $col = $(col),
+                            text = $col.text();
+
+                        return text.replace(/"/g, '""'); // escape double quotes
+
+                    }).get().join(tmpColDelim);
+
+                }).get().join(tmpRowDelim)
+                    .split(tmpRowDelim).join(rowDelim)
+                    .split(tmpColDelim).join(colDelim) + '"';
+
+            // Deliberate 'false', see comment below
+            if (false && window.navigator.msSaveBlob) {
+
+                var blob = new Blob([decodeURIComponent(csv)], {
+                    type: 'text/csv;charset=utf8'
+                });
+
+                // Crashes in IE 10, IE 11 and Microsoft Edge
+                // See MS Edge Issue #10396033
+                // Hence, the deliberate 'false'
+                // This is here just for completeness
+                // Remove the 'false' at your own risk
+                window.navigator.msSaveBlob(blob, filename);
+
+            } else if (window.Blob && window.URL) {
+                // HTML5 Blob        
+                var blob = new Blob([csv], {
+                    type: 'text/csv;charset=utf-8'
+                });
+                var csvUrl = URL.createObjectURL(blob);
+
+                $(this)
+                    .attr({
+                        'download': filename,
+                        'href': csvUrl
+                    });
+            } else {
+                // Data URI
+                var csvData = 'data:application/csv;charset=utf-8,' + encodeURIComponent(csv);
+
+                $(this)
+                    .attr({
+                        'download': filename,
+                        'href': csvData,
+                        'target': '_blank'
+                    });
+            }
+        }
+
+        $(".export-as-csv").on('click', function (event) {
+            var args = [$('#results-table'), 'traffic_by_app.csv'];
+            exportTableToCSV.apply(this, args);
+        });
+
+
+    </script>
+
+</body>
+
+</html>

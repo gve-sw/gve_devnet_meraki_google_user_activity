@@ -1,0 +1,525 @@
+<!-- 
+Copyright (c) 2021 Cisco and/or its affiliates.
+
+This software is licensed to you under the terms of the Cisco Sample
+Code License, Version 1.1 (the "License"). You may obtain a copy of the
+License at
+
+https://developer.cisco.com/docs/licenses
+
+All use of the material herein must be in accordance with the terms of
+the License. All rights not expressly granted by the License are
+reserved. Unless required by applicable law or agreed to separately in
+writing, software distributed under the License is distributed on an "AS
+IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
+or implied. 
+-->
+
+<!doctype html>
+<html lang="en">
+
+<head>
+
+    <!-- Using Cisco UI Kit -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static',filename='css/cui-standard.min.css') }}">
+
+    <!-- Using AJAX to send get & post http requests -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.2/jquery.min.js"></script>
+
+    <!-- Functions -->
+    <script>
+
+        function org_changed() {
+            // Enabling org submit button
+            var org_submit = document.getElementById("org-submit");
+            org_submit.disabled = false;
+            org_submit.focus;
+
+            // Cleaning and disabling network select area
+            var networks_select = document.getElementById("networks-select");
+
+            // Disabling time input & button
+            var time_submit = document.getElementById("time-submit");
+            time_submit.disabled = true;
+
+            var length = networks_select.options.length;
+            for (i = length - 1; i >= 0; i--) {
+                networks_select.options[i] = null;
+            }
+
+            // Creating default disabled option
+            var option = document.createElement("option");
+            option.disabled = true;
+            option.selected = true;
+            option.hidden = true;
+            option.text = 'Please choose...';
+            networks_select.appendChild(option);
+            networks_select.disabled = true;
+
+
+            // Disabling network submit button
+            var network_submit = document.getElementById("network-submit");
+            network_submit.disabled = true;
+        }
+
+        function org_selected() {
+            var selected_org = document.getElementById("organizations-select").value;
+            var org_loader = document.getElementById("org-loader");
+            org_loader.hidden = false;
+
+            // Disabling org button
+            var org_submit = document.getElementById("org-submit");
+            org_submit.disabled = true;
+
+            // Disabling User's email input and buttons
+            var user_email_input = document.getElementById("user-email-input");
+            var get_traffic_by_user = document.getElementById("get-traffic-by-user");
+            var get_traffic_by_app = document.getElementById("get-traffic-by-app");
+            user_email_input.disabled = true;
+            get_traffic_by_user.disabled = true;
+            get_traffic_by_app.disabled = true
+
+            $.post('/assign_org',
+                {
+                    selected_org: selected_org
+                }).done(function (response) {
+                    org_loader.hidden = true;
+                    networks = JSON.parse(response);
+                    list_networks(networks);
+                });
+        }
+
+        function list_networks(networks) {
+            // Enabling network select area
+            var networks_select = document.getElementById("networks-select");
+            networks_select.disabled = false;
+
+            // Adding the list of networks to the select drowpdown            
+            for (var i = 0; i < networks.length; i++) {
+                var option = document.createElement("option");
+                option.value = networks[i].id;
+                option.text = networks[i].name;
+                networks_select.appendChild(option);
+            }
+
+        }
+
+        function network_changed() {
+            // Enabling network submit button
+            var network_submit = document.getElementById("network-submit");
+            network_submit.disabled = false;
+
+            // Disabling org submit button
+            var org_submit = document.getElementById("org-submit");
+            org_submit.disabled = true;
+
+            // Disabling time input & button
+            var time_submit = document.getElementById("time-submit");
+            time_submit.disabled = true;
+
+            // Disabling User's email input and buttons
+            var user_email_input = document.getElementById("user-email-input");
+            var get_traffic_by_user = document.getElementById("get-traffic-by-user");
+            var get_traffic_by_app = document.getElementById("get-traffic-by-app");
+            user_email_input.disabled = true;
+            get_traffic_by_user.disabled = true;
+            get_traffic_by_app.disabled = true
+        }
+
+        function network_selected() {
+            var selected_network = document.getElementById("networks-select").value;
+            var network_loader = document.getElementById("network-loader");
+            network_loader.hidden = false;
+
+            // Disabling network choose button
+            var network_submit = document.getElementById("network-submit");
+            network_submit.disabled = true;
+
+            $.post('/assign_network',
+                {
+                    selected_network: selected_network
+                }).done(function (response) {
+                    network_loader.hidden = true;
+                });
+        }
+
+        function time_changed() {
+            var time_value = document.getElementById("timespan-in-days");
+            var time_submit = document.getElementById("time-submit");
+
+            // Disabling User's email input and buttons
+            var user_email_input = document.getElementById("user-email-input");
+            var get_traffic_by_user = document.getElementById("get-traffic-by-user");
+            var get_traffic_by_app = document.getElementById("get-traffic-by-app");
+            user_email_input.disabled = true;
+            get_traffic_by_user.disabled = true;
+            get_traffic_by_app.disabled = true;
+
+            // Checking time limits
+            if (time_value.value > 29) {
+                alert('The maximum number of days is 29');
+                time_value.value = 29;
+            }
+            else if (time_value.value < 1) {
+                time_submit.disabled = true;
+            }
+            else {
+                time_submit.disabled = false;
+            }
+        }
+
+        function time_selected() {
+            var time_loader = document.getElementById("time-loader");
+            time_loader.hidden = false;
+
+            var start_date = "";
+            var end_date = "";
+
+            // If the readio selected was for timespan
+            if (document.getElementById("time-span").checked) {
+                var today = new Date();
+                var selected_time_span = document.getElementById("timespan-in-days").value;
+                var selected_start_date = new Date();
+                selected_start_date.setDate(selected_start_date.getDate() - selected_time_span);
+                
+                // Today's date - selected_time_span
+                start_date = selected_start_date.getFullYear() + "-" + ('0' + (selected_start_date.getMonth()+1)).substr(-2) + "-" + ('0' + selected_start_date.getDate()).substr(-2);
+                end_date = today.getFullYear() + "-" + ('0' + (today.getMonth()+1)).substr(-2) + "-" + ('0' + today.getDate()).substr(-2);
+            }
+
+            // If the readio selected was for timerange
+            else if (document.getElementById("time-range").checked) {
+                start_date = document.getElementById("timerange-from-date").value;
+                end_date = document.getElementById("timerange-to-date").value;
+            }
+
+            // If the readio selected was for specific date
+            else if (document.getElementById("time-specific-date").checked) {
+                var selected_date = document.getElementById("specific-day").value;
+                start_date = selected_date;
+                end_date = selected_date;
+            }
+
+
+            // Disabling time button
+            var time_submit = document.getElementById("time-submit");
+            time_submit.disabled = true;
+
+            $.post('/assign_time',
+                {
+                    start_date: start_date,
+                    end_date: end_date
+                }).done(function (response) {
+                    time_loader.hidden = true;
+
+                    // Enabling User's email input and buttons
+                    var user_email_input = document.getElementById("user-email-input");
+                    var get_traffic_by_user = document.getElementById("get-traffic-by-user");
+                    var get_traffic_by_app = document.getElementById("get-traffic-by-app");
+                    user_email_input.disabled = false;
+                    get_traffic_by_user.disabled = false;
+                    get_traffic_by_app.disabled = false;
+
+                });
+
+        }
+
+        function traffic_by_user() {
+
+            var selected_user = document.getElementById("user-email-input").value;
+
+            $.post('/assign_user',
+            {
+                selected_user: selected_user
+            }).done(function (response) {
+                redirect: window.open("../traffic_by_user", '_blank');
+            });
+
+        }
+
+        function traffic_by_app() {
+            var selected_user = document.getElementById("user-email-input").value;
+
+            $.post('/assign_user',
+            {
+                selected_user: selected_user
+            }).done(function (response) {
+                redirect: window.open("../traffic_by_app", '_blank');
+            });
+        }
+        
+    </script>
+
+</head>
+
+<body class="cui">
+
+    <!-- Main Header -->
+    <nav class="header" id="styleguideheader" role="navigation">
+        <div class="container-fluid">
+            <div class="header-panels">
+                <div class="header-panel hidden-md-down">
+                    <a class="header__logo" href="http://www.cisco.com" target="_blank">
+                        <span class="icon-cisco"></span>
+                    </a>
+                    <h1 class="header__title">
+                        <span>Meraki - Google User's Activity - Demo</span>
+                    </h1>
+                </div>
+                <div class="header-panel header-panel--center base-margin-left base-margin-right hidden-lg-up">
+                    <a class="header__logo" href="http://www.cisco.com" target="_blank">
+                        <span class="icon-cisco"></span>
+                    </a>
+                </div>
+                <div class="header-panel header-panel--right hidden-md-down">
+                    <a href="../logout" class="header-item" title="Logout"><span
+                            class="btn btn--ghost">Logout</span></a>
+                    <a href="../" class="header-item" title="Home"><span class="icon-home"></span></a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <div class="content content--alt">
+        <div class="container-fluid">
+
+            <!-- Header -->
+            <div class="panel panel--loose panel--raised base-margin-top">
+                <h5 class="title">
+                    Meraki - Google User's Activity - Demo
+                    <!-- API Key -->
+                    <span class="pull-right">api_key: {{ hidden_api_key }} </span>
+                </h5>
+            </div>
+
+            <div class="row">
+                <!-- Org Rail -->
+                <div class="col-xl-3 col-md-3">
+                    <div class="section">
+                        <div class="panel panel--loose panel--raised base-margin-bottom">
+                            <h6>
+                                Select Organization:
+                            </h6>
+                            <div class="section">
+
+                                <!--Organization fields-->
+                                <div class="form-group base-margin-bottom">
+                                    <div class="form-group__text select">
+                                        <select name="organizations-select" id='organizations-select' required
+                                            onchange="org_changed()">
+                                            <option disabled selected hidden value="0">Please choose...</option>
+                                            {% for orga in orgs %}
+                                            <option value="{{orga.id}}">
+                                                {{orga.name}}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <label for="organizations-select">Organization</label>
+                                    </div>
+                                    <br>
+                                    <button class="btn btn--primary" id="org-submit" onclick="org_selected()"
+                                        disabled>Submit</button>
+                                    <!-- Org Loader  -->
+                                    <div class="loader loader pull-right" aria-label="Running, please wait...">
+                                        <div class="wrapper" id="org-loader" hidden>
+                                            <div class="wheel"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Network Rail -->
+                <div class="col-xl-3 col-md-3">
+                    <div class="section">
+                        <div class="panel panel--loose panel--raised base-margin-bottom">
+                            <h6>
+                                Select Network:
+                            </h6>
+                            <div class="section">
+
+                                <!--Networks fields-->
+                                <div class="form-group base-margin-bottom">
+                                    <div class="form-group__text select">
+                                        <select name="networks-select" id='networks-select' onchange="network_changed()"
+                                            required disabled>
+                                            <option disabled selected hidden value="0">Please choose...</option>
+                                        </select>
+                                        <label for="networks-select">Network</label>
+                                    </div>
+                                    <br>
+                                    <button class="btn btn--primary" id="network-submit" onclick="network_selected()"
+                                        disabled>Submit</button>
+                                    <!-- Network Loader  -->
+                                    <div class="loader loader pull-right" aria-label="Running, please wait...">
+                                        <div class="wrapper" id="network-loader" hidden>
+                                            <div class="wheel"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Rail -->
+                <div class="col-xl-3 col-md-3">
+                    <div class="section">
+                        <div class="panel panel--loose panel--raised base-margin-bottom">
+                            <h6>
+                                Select Time:
+                            </h6>
+                            <div class="section">
+
+                                <!-- Time fields -->
+                                <div class="form-group base-margin-bottom">
+                                    <div class="form-group__text">
+                                        <label class="radio">
+                                            <input type="radio" name="time-radio-selector" id="time-span" oninput="time_changed()">
+                                            <span class="radio__input"></span>
+                                            <div>&nbsp;Time Span (last # of days)</div>
+                                        </label>
+                                        <div class="radio-group" disabled>
+                                            <input id="timespan-in-days" type="number" min="1" max="29" value="10"
+                                                oninput="time_changed()">
+                                        </div>
+                                        <span disabled>(Max: 29 days)</span>
+                                    </div>
+
+                                    <br>
+
+                                    <div class="form-group__text">
+
+                                        <label class="radio">
+                                            <input type="radio" name="time-radio-selector" id="time-range" oninput="time_changed()">
+                                            <span class="radio__input"></span>
+                                            <div>&nbsp;Time Range</div>
+                                        </label>
+                                        <div class="radio-group" disabled>
+                                            <label>From:</label>
+                                            <input id="timerange-from-date" type="date" oninput="time_changed()">
+                                            <label>To:</label>
+                                            <input id="timerange-to-date" type="date" oninput="time_changed()">
+                                            <span disabled>(Must be in the past 29 days)</span>
+                                        </div>
+
+                                    </div>
+
+                                    <br>
+
+                                    <div class="form-group__text">
+                                        <label class="radio">
+                                            <input type="radio" name="time-radio-selector" id="time-specific-date" oninput="time_changed()">
+                                            <span class="radio__input"></span>
+                                            <div>&nbsp;Specific day</div>
+                                        </label>
+                                        <div class="radio-group" disabled>
+                                            <input id="specific-day" type="date" oninput="time_changed()">
+                                            <span disabled>(Must be in the past 29 days)</span>
+                                        </div>
+                                    </div>
+
+                                    <hr>
+
+                                    <button class="btn btn--primary" id="time-submit" onclick="time_selected()"
+                                        disabled>Submit</button>
+
+                                    <!-- Time Loader  -->
+                                    <div class="loader loader pull-right" aria-label="Running, please wait...">
+                                        <div class="wrapper" id="time-loader" hidden>
+                                            <div class="wheel"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Rail -->
+                <div class="col-xl-3 col-md-3">
+                    <div class="section">
+                        <div class="panel panel--loose panel--raised base-margin-bottom">
+                            <h6>
+                                User's email:
+                            </h6>
+                            <div class="section">
+
+                                <!-- Time fields -->
+                                <div class="form-group base-margin-bottom">
+                                    <div class="form-group__text">
+                                        <div class="form-group__text">
+                                            <div>
+                                                <label>User's email:</label>
+                                                <input id="user-email-input" disabled>
+                                            </div>
+                                            <span disabled>(Leave empty to get all users)</span>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <button class="btn btn--primary" id="get-traffic-by-user"
+                                        onclick="traffic_by_user()" disabled>Get Traffic Report by User</button>
+                                    <hr>
+                                    <button class="btn btn--secondary" id="get-traffic-by-app"
+                                        onclick="traffic_by_app()" disabled>Get Traffic Report by
+                                        Application</button>
+
+                                    <!-- Time Loader  -->
+                                    <div class="loader loader pull-right" aria-label="Running, please wait...">
+                                        <div class="wrapper" id="time-loader" hidden>
+                                            <div class="wheel"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer__links">
+                <ul class="list list--inline">
+                    <li><a href="http://www.cisco.com/cisco/web/siteassets/contacts/index.html"
+                            target="_blank">Contacts</a>
+                    </li>
+                    <li><a href="https://secure.opinionlab.com/ccc01/o.asp?id=jBjOhqOJ" target="_blank">Feedback</a>
+                    </li>
+                    <li><a href="https://www.cisco.com/c/en/us/about/help.html" target="_blank">Help</a></li>
+                    <li><a href="http://www.cisco.com/c/en/us/about/sitemap.html" target="_blank">Site Map</a></li>
+                    <li><a href="https://www.cisco.com/c/en/us/about/legal/terms-conditions.html" target="_blank">Terms
+                            & Conditions</a></li>
+                    </li>
+                    <li><a href="https://www.cisco.com/c/en/us/about/legal/privacy-full.html" target="_blank">Privacy
+                            Statement</a></li>
+                    <li><a href="https://www.cisco.com/c/en/us/about/legal/privacy-full.html#cookies"
+                            target="_blank">Cookie
+                            Policy</a></li>
+                    <li><a href="https://www.cisco.com/c/en/us/about/legal/trademarks.html"
+                            target="_blank">Trademarks</a></li>
+                </ul>
+            </div>
+        </footer>
+
+        <!-- Functions -->
+        <script>
+
+            // Showing sub-section of each radio button
+            $('[name="time-radio-selector"]').click(function () {
+                $('div.radio-group').attr("disabled", true);
+                $(this).parent().next("div.radio-group").attr("disabled", false);
+                $('#time-submit').attr("disabled", false);
+            })
+        </script>
+
+    </div>
+
+</body>
+
+</html>
