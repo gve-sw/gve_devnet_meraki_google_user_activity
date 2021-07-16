@@ -18,6 +18,9 @@ This prototype shows a sample customized report of Meraki users' traffic activit
 ![/IMAGES/Solution_overview.png](/IMAGES/Solution_overview.png)
 
 
+- Video showing a sample run of this prototype:
+https://www.youtube.com/watch?v=D3yIwzVDIlA
+
 ## Installation/Configuration
 
 ### Requirements
@@ -49,7 +52,7 @@ This prototype shows a sample customized report of Meraki users' traffic activit
    ```python3 -m venv <name of environment>```
 
  2. Activate the created virtual environment:  
-   ```source <name of environment>/bin/activate```
+   ```source <name of environment>/Scripts/activate```
 
  3. Access the created virtual environment:  
    ```cd <name of environment>```
